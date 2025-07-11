@@ -44,7 +44,7 @@ class COCODatasetHandler:
 
     def validate_datasets(self):
         """Validate all discovered datasets"""
-        print("🔍 Validating datasets...")
+        print("Validating datasets...")
 
         total_images = 0
         total_annotations = 0
@@ -69,7 +69,7 @@ class COCODatasetHandler:
 
         print(f"Total: {total_images} images, {total_annotations} annotations")
         if missing_images:
-            print(f"⚠️  Missing {len(missing_images)} image files")
+            print(f"Missing {len(missing_images)} image files")
 
         return {
             "total_images": total_images,

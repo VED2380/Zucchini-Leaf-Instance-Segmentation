@@ -266,10 +266,6 @@ black .
 flake8 .
 ```
 
-## 📝 License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
 ## 🙏 Acknowledgments
 
 - [Ultralytics](https://github.com/ultralytics/ultralytics) for the YOLOv8 implementation

@@ -1,12 +1,11 @@
 import streamlit as st
-import cv2
-import numpy as np
-from PIL import Image
+import requests
+import os
 import torch
 from ultralytics import YOLO
-import os
-from pathlib import Path
-import requests
+from PIL import Image
+import numpy as np
+import cv2
 import pandas as pd
 
 # Streamlit page config
@@ -17,94 +16,20 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Custom CSS for enhanced styling
-st.markdown("""
-<style>
-    /* Custom CSS for the app */
-    .stApp {
-        font-family: 'Inter', sans-serif;
-        background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
-    }
+# Function to download the file from Google Drive
+def download_file_from_google_drive(file_id, destination):
+    URL = f"https://drive.google.com/uc?export=download&id={file_id}"
 
-    .main-header {
-        font-size: 3rem;
-        font-weight: 700;
-        background: linear-gradient(135deg, #2E8B57, #228B22, #32CD32);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        background-clip: text;
-        text-align: center;
-        margin-bottom: 2rem;
-        text-shadow: 0 2px 4px rgba(0,0,0,0.1);
-    }
-    
-    .metric-container {
-        background: linear-gradient(135deg, #ffffff 0%, #f8fffe 100%);
-        padding: 1.5rem;
-        border-radius: 15px;
-        border: 1px solid #e0f2e0;
-        box-shadow: 0 4px 15px rgba(46, 139, 87, 0.1);
-        margin: 1rem 0;
-        transition: transform 0.3s ease, box-shadow 0.3s ease;
-    }
+    with requests.get(URL, stream=True) as r:
+        if r.status_code == 200:
+            with open(destination, "wb") as f:
+                for chunk in r.iter_content(chunk_size=8192):
+                    f.write(chunk)
+            st.success(f"Model downloaded successfully to {destination}")
+        else:
+            st.error(f"Error downloading model: {r.status_code}")
 
-    .leaf-count {
-        font-size: 3.5rem;
-        font-weight: 700;
-        color: #2E8B57;
-        text-align: center;
-    }
-
-    .confidence-text {
-        font-size: 1.1rem;
-        color: #666;
-        text-align: center;
-        font-weight: 500;
-        text-transform: uppercase;
-    }
-
-    .stButton > button {
-        background: linear-gradient(135deg, #2E8B57 0%, #32CD32 100%);
-        color: white;
-        border: none;
-        border-radius: 10px;
-        padding: 0.75rem 1.5rem;
-        font-weight: 600;
-    }
-
-    .stImage {
-        border-radius: 15px;
-        box-shadow: 0 8px 25px rgba(0,0,0,0.1);
-        transition: transform 0.3s ease;
-    }
-
-    .stImage:hover {
-        transform: scale(1.02);
-    }
-</style>
-""", unsafe_allow_html=True)
-
-# Function to download the model file from GitHub release if not found locally
-def download_model_from_github(release_url, model_path):
-    # Ensure the directory exists
-    os.makedirs(os.path.dirname(model_path), exist_ok=True)
-
-    # Construct the direct download URL from the GitHub release link
-    download_url = release_url + "/download"
-    
-    # Download the file
-    try:
-        response = requests.get(download_url)
-        response.raise_for_status()
-
-        # Save the model file to the specified path
-        with open(model_path, 'wb') as f:
-            f.write(response.content)
-        st.success(f"Model downloaded successfully to {model_path}")
-    except requests.exceptions.RequestException as e:
-        st.error(f"Error downloading model: {e}")
-
-# Function to load the model
+# Function to load model
 @st.cache_resource
 def load_model(model_path):
     if os.path.exists(model_path):
@@ -206,13 +131,8 @@ def main():
         
         # Model configuration section
         st.markdown("#### 🤖 Model Settings")
-        model_path = st.text_input("Model Path", "./outputs/zucchini_leaf_segmentation/weights/best.pt")
+        model_file_id = st.text_input("Google Drive File ID", "1YcZxsm5g1Cw3zUxHziB9zOrwBKb7ZBW7")
         
-        # Add release link section
-        st.markdown("#### 📦 Model Download")
-        release_link = "https://github.com/VED2380/Zucchini-Leaf-Instance-Segmentation/releases/tag/v1.1"
-        st.markdown(f"[Download the model here]( {release_link} )")
-
         # Detection parameters section
         st.markdown("#### 🎯 Detection Parameters")
         confidence_threshold = st.slider("Confidence Threshold", 0.1, 1.0, 0.25, 0.05, 
@@ -236,11 +156,13 @@ def main():
         </div>
         """, unsafe_allow_html=True)
 
-    # If the model path is not specified or missing, download it from the release
-    model_file_path = "./outputs/zucchini_leaf_segmentation/weights/best.pt"
+    # Path to save the model
+    model_file_path = "./best.pt"
+
+    # If the model path is not specified or missing, download it from Google Drive
     if not os.path.exists(model_file_path):
-        st.warning("Model not found locally. Downloading from release...")
-        download_model_from_github(release_link, model_file_path)
+        st.warning("Model not found locally. Downloading from Google Drive...")
+        download_file_from_google_drive(model_file_id, model_file_path)
 
     model = load_model(model_file_path)
     if not model:
@@ -345,7 +267,7 @@ def main():
             with stats_col:
                 # Add summary statistics with better visibility
                 if confidences:
-                                        st.markdown(f"""
+                    st.markdown(f"""
                     <div style="padding: 1.5rem; background: linear-gradient(135deg, #ffffff 0%, #f8fffe 100%); border-radius: 12px; border: 2px solid #2E8B57; box-shadow: 0 4px 15px rgba(46, 139, 87, 0.15);">
                         <p style="margin: 0 0 0.8rem 0; text-align: center; font-weight: 700; font-size: 1rem; color: #2E8B57;">
                             📊 Detection Quality
@@ -366,3 +288,19 @@ def main():
                         </div>
                     </div>
                     """, unsafe_allow_html=True)
+            
+            # Add bottom spacing
+            st.markdown("<br><br>", unsafe_allow_html=True)
+    else:
+        # Enhanced empty state
+        st.markdown("""
+        <div style="text-align: center; padding: 3rem; margin: 2rem 0; border: 2px dashed #2E8B57; border-radius: 15px; background: linear-gradient(135deg, #ffffff 0%, #f8fffe 100%);">
+            <h3 style="color: #2E8B57; margin-bottom: 1rem;">🌱 Ready to Count Leaves!</h3>
+            <p style="color: #666; font-size: 1.1rem; margin: 0;">
+                Upload an image of zucchini leaves to get started with AI-powered detection and counting.
+            </p>
+        </div>
+        """, unsafe_allow_html=True)
+
+if __name__ == "__main__":
+    main()

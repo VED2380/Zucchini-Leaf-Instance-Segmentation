@@ -86,6 +86,9 @@ st.markdown("""
 
 # Function to download the model file from GitHub release if not found locally
 def download_model_from_github(release_url, model_path):
+    # Ensure the directory exists
+    os.makedirs(os.path.dirname(model_path), exist_ok=True)
+
     # Construct the direct download URL from the GitHub release link
     download_url = release_url + "/download"
     
@@ -357,25 +360,4 @@ def main():
                                 <span style="color: #2E8B57; font-weight: 700; font-size: 1rem;">{max(confidences):.1%}</span>
                             </div>
                             <div>
-                                <span style="color: #666; font-weight: 500; font-size: 0.9rem;">Std Dev:</span> 
-                                <span style="color: #2E8B57; font-weight: 700; font-size: 1rem;">{np.std(confidences):.1%}</span>
-                            </div>
-                        </div>
-                    </div>
-                    """, unsafe_allow_html=True)
-            
-            # Add bottom spacing
-            st.markdown("<br><br>", unsafe_allow_html=True)
-    else:
-        # Enhanced empty state
-        st.markdown("""
-        <div style="text-align: center; padding: 3rem; margin: 2rem 0; border: 2px dashed #2E8B57; border-radius: 15px; background: linear-gradient(135deg, #ffffff 0%, #f8fffe 100%);">
-            <h3 style="color: #2E8B57; margin-bottom: 1rem;">🌱 Ready to Count Leaves!</h3>
-            <p style="color: #666; font-size: 1.1rem; margin: 0;">
-                Upload an image of zucchini leaves to get started with AI-powered detection and counting.
-            </p>
-        </div>
-        """, unsafe_allow_html=True)
-
-if __name__ == "__main__":
-    main()
+                                <span style="color: #666; font-weight: 500; font-size: 0.9rem

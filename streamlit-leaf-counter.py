@@ -345,7 +345,7 @@ def main():
             with stats_col:
                 # Add summary statistics with better visibility
                 if confidences:
-                    st.markdown(f"""
+                                        st.markdown(f"""
                     <div style="padding: 1.5rem; background: linear-gradient(135deg, #ffffff 0%, #f8fffe 100%); border-radius: 12px; border: 2px solid #2E8B57; box-shadow: 0 4px 15px rgba(46, 139, 87, 0.15);">
                         <p style="margin: 0 0 0.8rem 0; text-align: center; font-weight: 700; font-size: 1rem; color: #2E8B57;">
                             📊 Detection Quality
@@ -360,4 +360,9 @@ def main():
                                 <span style="color: #2E8B57; font-weight: 700; font-size: 1rem;">{max(confidences):.1%}</span>
                             </div>
                             <div>
-                                <span style="color: #666; font-weight: 500; font-size: 0.9rem
+                                <span style="color: #666; font-weight: 500; font-size: 0.9rem;">Std Dev:</span> 
+                                <span style="color: #2E8B57; font-weight: 700; font-size: 1rem;">{np.std(confidences):.1%}</span>
+                            </div>
+                        </div>
+                    </div>
+                    """, unsafe_allow_html=True)

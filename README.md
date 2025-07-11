@@ -185,7 +185,7 @@ The following visualizations show the complete training progression and model co
 |--------|------------------|-----------|-------------|
 | mAP@0.5 | 70-85% | **96.53%** | +13-26% |
 | Segmentation Quality | 65-80% | **95.71%** | +15-30% |
-| Training Efficiency | 100-200 epochs | **=1.13.0 |
+| Training Efficiency | 100-200 epochs |<50 epochs| 50-75% faster |
 
 ### 📈 Performance Analysis
 

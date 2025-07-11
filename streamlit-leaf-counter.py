@@ -1,6 +1,3 @@
-# Zucchini Leaf Counter - Streamlit App (Enhanced UI Version)
-# YOLOv8/YOLOv11 Instance Segmentation based
-
 import streamlit as st
 import cv2
 import numpy as np
@@ -9,6 +6,7 @@ import torch
 from ultralytics import YOLO
 import os
 from pathlib import Path
+import requests
 import pandas as pd
 
 # Streamlit page config
@@ -22,16 +20,12 @@ st.set_page_config(
 # Custom CSS for enhanced styling
 st.markdown("""
 <style>
-    /* Import Google Fonts */
-    @import url("https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap");
-    
-    /* Global styles */
+    /* Custom CSS for the app */
     .stApp {
         font-family: 'Inter', sans-serif;
         background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
     }
-    
-    /* Main header styling */
+
     .main-header {
         font-size: 3rem;
         font-weight: 700;
@@ -44,7 +38,6 @@ st.markdown("""
         text-shadow: 0 2px 4px rgba(0,0,0,0.1);
     }
     
-    /* Enhanced metric container */
     .metric-container {
         background: linear-gradient(135deg, #ffffff 0%, #f8fffe 100%);
         padding: 1.5rem;
@@ -53,67 +46,23 @@ st.markdown("""
         box-shadow: 0 4px 15px rgba(46, 139, 87, 0.1);
         margin: 1rem 0;
         transition: transform 0.3s ease, box-shadow 0.3s ease;
-        position: relative;
-        overflow: hidden;
     }
-    
-    .metric-container::before {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: 0;
-        right: 0;
-        height: 4px;
-        background: linear-gradient(90deg, #2E8B57, #32CD32);
-    }
-    
-    .metric-container:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 8px 25px rgba(46, 139, 87, 0.15);
-    }
-    
-    /* Leaf count styling */
+
     .leaf-count {
         font-size: 3.5rem;
         font-weight: 700;
         color: #2E8B57;
         text-align: center;
-        margin-bottom: 0.5rem;
-        text-shadow: 0 2px 4px rgba(0,0,0,0.1);
     }
-    
-    /* Confidence text styling */
+
     .confidence-text {
         font-size: 1.1rem;
         color: #666;
         text-align: center;
         font-weight: 500;
         text-transform: uppercase;
-        letter-spacing: 0.5px;
     }
-    
-    /* Sidebar styling */
-    .css-1d391kg {
-        background: linear-gradient(180deg, #ffffff 0%, #f8fffe 100%);
-        border-right: 2px solid #e0f2e0;
-    }
-    
-    /* Upload area styling */
-    .uploadedFile {
-        border: 2px dashed #2E8B57;
-        border-radius: 15px;
-        padding: 2rem;
-        text-align: center;
-        background: linear-gradient(135deg, #ffffff 0%, #f8fffe 100%);
-        transition: all 0.3s ease;
-    }
-    
-    .uploadedFile:hover {
-        border-color: #32CD32;
-        background: linear-gradient(135deg, #f8fffe 0%, #f0fff0 100%);
-    }
-    
-    /* Button styling */
+
     .stButton > button {
         background: linear-gradient(135deg, #2E8B57 0%, #32CD32 100%);
         color: white;
@@ -121,63 +70,38 @@ st.markdown("""
         border-radius: 10px;
         padding: 0.75rem 1.5rem;
         font-weight: 600;
-        transition: all 0.3s ease;
-        box-shadow: 0 4px 15px rgba(46, 139, 87, 0.2);
     }
-    
-    .stButton > button:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 6px 20px rgba(46, 139, 87, 0.3);
-    }
-    
-    /* Slider styling */
-    .stSlider > div > div > div > div {
-        background: linear-gradient(90deg, #2E8B57, #32CD32);
-    }
-    
-    /* Progress bar styling */
-    .stProgress > div > div > div > div {
-        background: linear-gradient(90deg, #2E8B57, #32CD32);
-    }
-    
-    /* Image container styling */
+
     .stImage {
         border-radius: 15px;
-        overflow: hidden;
         box-shadow: 0 8px 25px rgba(0,0,0,0.1);
         transition: transform 0.3s ease;
     }
-    
+
     .stImage:hover {
         transform: scale(1.02);
-    }
-    
-    /* Results section styling */
-    .results-header {
-        font-size: 2rem;
-        font-weight: 600;
-        color: #2E8B57;
-        text-align: center;
-        margin: 2rem 0 1rem 0;
-        padding: 1rem;
-        background: linear-gradient(135deg, #ffffff 0%, #f8fffe 100%);
-        border-radius: 15px;
-        border: 1px solid #e0f2e0;
-    }
-    
-    /* Animation for loading */
-    @keyframes pulse {
-        0% { opacity: 1; }
-        50% { opacity: 0.7; }
-        100% { opacity: 1; }
-    }
-    
-    .analyzing {
-        animation: pulse 2s infinite;
     }
 </style>
 """, unsafe_allow_html=True)
 
+# Function to download the model file from GitHub release if not found locally
+def download_model_from_github(release_url, model_path):
+    # Construct the direct download URL from the GitHub release link
+    download_url = release_url + "/download"
+    
+    # Download the file
+    try:
+        response = requests.get(download_url)
+        response.raise_for_status()
+
+        # Save the model file to the specified path
+        with open(model_path, 'wb') as f:
+            f.write(response.content)
+        st.success(f"Model downloaded successfully to {model_path}")
+    except requests.exceptions.RequestException as e:
+        st.error(f"Error downloading model: {e}")
+
+# Function to load the model
 @st.cache_resource
 def load_model(model_path):
     if os.path.exists(model_path):
@@ -185,6 +109,7 @@ def load_model(model_path):
     st.error(f"Model file not found: {model_path}")
     return None
 
+# Image preprocessing
 def preprocess_image(image):
     img_array = np.array(image)
     if img_array.dtype != np.uint8:
@@ -193,6 +118,7 @@ def preprocess_image(image):
         img_array = cv2.cvtColor(img_array, cv2.COLOR_RGBA2RGB)
     return cv2.cvtColor(img_array, cv2.COLOR_RGB2BGR)
 
+# Function to run inference
 def run_inference(model, image, conf_thresh, iou_thresh):
     try:
         device = 'cuda' if torch.cuda.is_available() else 'cpu'
@@ -210,12 +136,14 @@ def run_inference(model, image, conf_thresh, iou_thresh):
         st.error(f"❌ Error during inference: {str(e)}")
         return None
 
+# Counting leaves
 def count_leaves(result):
     if result and hasattr(result, 'boxes') and result.boxes is not None:
         confs = result.boxes.conf.cpu().numpy().tolist() if hasattr(result.boxes, 'conf') else []
         return len(result.boxes), confs
     return 0, []
 
+# Function to create annotated image
 def create_annotated_image(image, result, show_conf=True):
     img_array = np.array(image)
     if img_array.dtype != np.uint8:
@@ -277,6 +205,11 @@ def main():
         st.markdown("#### 🤖 Model Settings")
         model_path = st.text_input("Model Path", "./outputs/zucchini_leaf_segmentation/weights/best.pt")
         
+        # Add release link section
+        st.markdown("#### 📦 Model Download")
+        release_link = "https://github.com/VED2380/Zucchini-Leaf-Instance-Segmentation/releases/tag/v1.1"
+        st.markdown(f"[Download the model here]( {release_link} )")
+
         # Detection parameters section
         st.markdown("#### 🎯 Detection Parameters")
         confidence_threshold = st.slider("Confidence Threshold", 0.1, 1.0, 0.25, 0.05, 
@@ -300,7 +233,13 @@ def main():
         </div>
         """, unsafe_allow_html=True)
 
-    model = load_model(model_path)
+    # If the model path is not specified or missing, download it from the release
+    model_file_path = "./outputs/zucchini_leaf_segmentation/weights/best.pt"
+    if not os.path.exists(model_file_path):
+        st.warning("Model not found locally. Downloading from release...")
+        download_model_from_github(release_link, model_file_path)
+
+    model = load_model(model_file_path)
     if not model:
         return
 
@@ -440,4 +379,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
